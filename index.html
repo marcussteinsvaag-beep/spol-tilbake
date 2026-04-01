@@ -293,7 +293,16 @@ function initPlayer(token) {
     });
     player.addListener('ready', function(data) {
       deviceId = data.device_id;
-      playSong();
+      // Transfer playback to this device first, then play
+      fetch('https://api.spotify.com/v1/me/player', {
+        method: 'PUT',
+        headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
+        body: JSON.stringify({device_ids: [deviceId], play: false})
+      }).then(function() {
+        setTimeout(playSong, 800);
+      }).catch(function() {
+        playSong(); // try anyway
+      });
     });
     player.addListener('not_ready', function() {
       sessionStorage.removeItem('spotify_token');
@@ -354,13 +363,17 @@ document.getElementById('btn-retry').addEventListener('click', function() {
   var songId  = params.get('id') !== null ? params.get('id') : sessionStorage.getItem('song_id');
   var idx     = parseInt(songId, 10);
 
+  // If ?id= is in URL, always use that (fresh QR scan) and clear old stored value
+  if (params.get('id') !== null) {
+    sessionStorage.setItem('song_id', idx);
+  }
+
   currentSong = (!isNaN(idx) && idx >= 0 && idx < SONGS.length) ? SONGS[idx] : null;
 
   if (!currentSong) {
-    showError('Ugyldig kort-ID. Skann QR-koden på nytt.');
+    showError('Ugyldig kort-ID (' + songId + '). Skann QR-koden på nytt.');
     return;
   }
-  sessionStorage.setItem('song_id', idx);
 
   if (code) {
     history.replaceState({}, '', '?id=' + idx);
