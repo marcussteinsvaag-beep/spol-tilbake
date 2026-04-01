@@ -283,7 +283,7 @@ body {
   <div id="screen-login">
     <p class="tagline">Logg inn med Spotify<br>for å spille av sangene</p>
     <br>
-    <button class="btn-spotify" onclick="window.startLogin()">🎵 &nbsp;Logg inn med Spotify</button>
+    <button class="btn-spotify" id="btn-login">🎵 &nbsp;Logg inn med Spotify</button>
   </div>
 
   <!-- LASTER -->
@@ -519,6 +519,10 @@ async function playSong() {
 function show(id) {
   ['screen-login','screen-loading','screen-player','screen-reveal','screen-error']
     .forEach(s => document.getElementById(s).style.display = s === id ? 'block' : 'none');
+  if (id === 'screen-login') {
+    var btn = document.getElementById('btn-login');
+    if (btn) btn.onclick = function() { startLogin(); };
+  }
 }
 
 function showReveal() {
@@ -597,7 +601,6 @@ async function init() {
   show('screen-login');
 }
 
-window.startLogin = startLogin;
 init();
 </script>
 </body>
