@@ -342,9 +342,13 @@ function playSong() {
 document.getElementById('btn-login').addEventListener('click', doLogin);
 
 document.getElementById('tap-area').addEventListener('click', function() {
-  document.getElementById('reveal-year').textContent   = currentSong.year;
-  document.getElementById('reveal-artist').textContent = currentSong.artist;
-  document.getElementById('reveal-title').textContent  = currentSong.title;
+  // Re-read from sessionStorage to be safe
+  var safeIdx = parseInt(sessionStorage.getItem('song_id'), 10);
+  var song = (!isNaN(safeIdx) && safeIdx >= 0 && safeIdx < SONGS.length)
+    ? SONGS[safeIdx] : currentSong;
+  document.getElementById('reveal-year').textContent   = song.year;
+  document.getElementById('reveal-artist').textContent = song.artist;
+  document.getElementById('reveal-title').textContent  = song.title;
   show('screen-reveal');
 });
 
@@ -374,6 +378,8 @@ document.getElementById('btn-retry').addEventListener('click', function() {
     showError('Ugyldig kort-ID (' + songId + '). Skann QR-koden på nytt.');
     return;
   }
+  // Always save the confirmed idx so reveal uses the right song
+  sessionStorage.setItem('song_id', idx);
 
   if (code) {
     history.replaceState({}, '', '?id=' + idx);
