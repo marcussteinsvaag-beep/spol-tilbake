@@ -283,7 +283,7 @@ body {
   <div id="screen-login">
     <p class="tagline">Logg inn med Spotify<br>for å spille av sangene</p>
     <br>
-    <button class="btn-spotify" onclick="startLogin()">🎵 &nbsp;Logg inn med Spotify</button>
+    <button class="btn-spotify" id="login-btn">🎵 &nbsp;Logg inn med Spotify</button>
   </div>
 
   <!-- LASTER -->
@@ -591,6 +591,7 @@ async function init() {
   show('screen-login');
 }
 
+document.getElementById('login-btn').addEventListener('click', startLogin);
 init();
 </script>
 </body>
