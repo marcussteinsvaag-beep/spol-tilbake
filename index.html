@@ -109,6 +109,81 @@ body {
 .dot:nth-child(2){animation-delay:0.2s;} .dot:nth-child(3){animation-delay:0.4s;}
 @keyframes dotpop { 0%,100%{transform:scale(1);opacity:0.4;} 50%{transform:scale(1.4);opacity:1;} }
 .loading-text { color:rgba(245,232,206,0.8); font-size:0.85rem; font-weight:700; font-style:italic; letter-spacing:2px; margin-top:16px; animation:blink 1.5s ease-in-out infinite; }
+
+.scan-screen { display:none; width:100%; }
+.scan-screen.active { display:block; }
+
+.scanner-wrap {
+  position:relative;
+  width:240px; height:240px;
+  margin:0 auto;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+
+#scanner-video {
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.scanner-overlay {
+  position:absolute;
+  inset:0;
+  border:3px solid #f5e8ce;
+  border-radius:16px;
+  pointer-events:none;
+}
+
+.scanner-corner {
+  position:absolute;
+  width:24px; height:24px;
+  border-color:#f7c700;
+  border-style:solid;
+}
+.scanner-corner.tl { top:8px;left:8px;border-width:3px 0 0 3px; }
+.scanner-corner.tr { top:8px;right:8px;border-width:3px 3px 0 0; }
+.scanner-corner.bl { bottom:8px;left:8px;border-width:0 0 3px 3px; }
+.scanner-corner.br { bottom:8px;right:8px;border-width:0 3px 3px 0; }
+
+.scan-line {
+  position:absolute;
+  left:12px; right:12px;
+  height:2px;
+  background:linear-gradient(90deg, transparent, #f7c700, transparent);
+  animation:scanline 2s ease-in-out infinite;
+}
+@keyframes scanline {
+  0%  { top:12px; opacity:1; }
+  50% { top:calc(100% - 14px); opacity:1; }
+  100%{ top:12px; opacity:1; }
+}
+
+.scan-hint {
+  color:rgba(245,232,206,0.75);
+  font-size:0.8rem;
+  font-weight:700;
+  font-style:italic;
+  letter-spacing:1px;
+  margin-top:20px;
+  text-align:center;
+}
+
+.btn-scan {
+  background:#f5e8ce;
+  color:#c8221a;
+  border:none;
+  border-radius:50px;
+  padding:14px 32px;
+  font-size:1rem;
+  font-weight:900;
+  font-style:italic;
+  font-family:inherit;
+  cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,0.3);
+  margin-top:8px;
+}
 </style>
 </head>
 <body>
@@ -122,6 +197,21 @@ body {
   <div id="screen-login" class="screen">
     <p class="tagline">Logg inn med Spotify<br>for å spille av sangene</p>
     <button class="btn-spotify" id="btn-login">🎵 &nbsp;Logg inn med Spotify</button>
+  </div>
+
+  <div id="screen-scan" class="screen scan-screen">
+    <div class="scanner-wrap">
+      <video id="scanner-video" playsinline autoplay muted></video>
+      <div class="scanner-overlay">
+        <div class="scanner-corner tl"></div>
+        <div class="scanner-corner tr"></div>
+        <div class="scanner-corner bl"></div>
+        <div class="scanner-corner br"></div>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+    <p class="scan-hint">Hold kortet foran kameraet</p>
+    <canvas id="scanner-canvas" style="display:none;"></canvas>
   </div>
   <div id="screen-loading" class="screen">
     <div class="dot-wrap"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
@@ -142,7 +232,9 @@ body {
       <div class="reveal-artist" id="reveal-artist"></div>
       <div class="reveal-title"  id="reveal-title"></div>
     </div>
-    <button class="btn-back" id="btn-back">↩ Tilbake</button>
+    <button class="btn-back" id="btn-back">↩ Hør igjen</button>
+    <br><br>
+    <button class="btn-scan" id="btn-next">📷 &nbsp;Skann neste kort</button>
   </div>
   <div id="screen-error" class="screen">
     <p class="error-text" id="error-msg"></p>
@@ -285,10 +377,11 @@ var deviceId = null;
 var accessToken = null;
 
 function show(id) {
-  ['screen-login','screen-loading','screen-player','screen-reveal','screen-error']
+  ['screen-login','screen-scan','screen-loading','screen-player','screen-reveal','screen-error']
     .forEach(function(s) {
       document.getElementById(s).classList.toggle('active', s === id);
     });
+  if (id !== 'screen-scan') stopScanner();
 }
 
 function showError(msg) {
@@ -402,8 +495,69 @@ function playSong() {
   .catch(function(e) { showError('Nettverksfeil: ' + e.message); });
 }
 
+// ── QR SCANNER ──
+var scannerStream = null;
+var scannerActive = false;
+
+function stopScanner() {
+  scannerActive = false;
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(function(t){ t.stop(); });
+    scannerStream = null;
+  }
+}
+
+function startScanner() {
+  show('screen-scan');
+  scannerActive = true;
+  var video   = document.getElementById('scanner-video');
+  var canvas  = document.getElementById('scanner-canvas');
+  var ctx     = canvas.getContext('2d');
+
+  navigator.mediaDevices.getUserMedia({
+    video: {facingMode: 'environment'},
+    audio: false
+  }).then(function(stream) {
+    scannerStream = stream;
+    video.srcObject = stream;
+    video.play();
+    requestAnimationFrame(scanFrame);
+  }).catch(function(e) {
+    showError('Kamera ikke tilgjengelig: ' + e.message);
+  });
+
+  function scanFrame() {
+    if (!scannerActive) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code && code.data) {
+        var url = code.data;
+        var match = url.match(/[?&]id=(\d+)/);
+        if (match) {
+          var idx = parseInt(match[1], 10);
+          if (idx >= 0 && idx < SONGS.length) {
+            stopScanner();
+            currentSong = SONGS[idx];
+            sessionStorage.setItem('song_id', idx);
+            playSong();
+            return;
+          }
+        }
+      }
+    }
+    requestAnimationFrame(scanFrame);
+  }
+}
+
 // Knytt knapper til funksjoner
 document.getElementById('btn-login').addEventListener('click', doLogin);
+
+document.getElementById('btn-next').addEventListener('click', startScanner);
+document.getElementById('btn-back').addEventListener('click', function() { show('screen-player'); });
 
 document.getElementById('tap-area').addEventListener('click', function() {
   // Re-read from sessionStorage to be safe
@@ -414,10 +568,6 @@ document.getElementById('tap-area').addEventListener('click', function() {
   document.getElementById('reveal-artist').textContent = song.artist;
   document.getElementById('reveal-title').textContent  = song.title;
   show('screen-reveal');
-});
-
-document.getElementById('btn-back').addEventListener('click', function() {
-  show('screen-player');
 });
 
 document.getElementById('btn-retry').addEventListener('click', function() {
@@ -446,12 +596,13 @@ document.getElementById('btn-retry').addEventListener('click', function() {
   sessionStorage.setItem('song_id', idx);
 
   if (code) {
-    history.replaceState({}, '', '?id=' + idx);
     show('screen-loading');
     getToken(code).then(function(token) {
       if (token.access_token) {
         sessionStorage.setItem('spotify_token', token.access_token);
-        initPlayer(token.access_token);
+        accessToken = token.access_token;
+        history.replaceState({}, '', location.pathname);
+        startScanner();
       } else {
         showError('Innlogging feilet: ' + (token.error_description || token.error || 'ukjent feil'));
       }
@@ -468,16 +619,19 @@ document.getElementById('btn-retry').addEventListener('click', function() {
 
   var stored = sessionStorage.getItem('spotify_token');
   if (stored) {
-    show('screen-loading');
-    initPlayer(stored).catch(function() {
-      sessionStorage.removeItem('spotify_token');
-      show('screen-login');
-    });
+    accessToken = stored;
+    // If specific song requested via URL, play it directly
+    if (params.get('id') !== null) {
+      playSong();
+    } else {
+      startScanner();
+    }
     return;
   }
 
   show('screen-login');
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </body>
 </html>
