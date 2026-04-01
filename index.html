@@ -324,7 +324,7 @@ body {
   <div id="screen-error">
     <p class="error-text" id="error-msg">Noe gikk galt.</p>
     <br>
-    <button class="btn-back" onclick="location.reload()">Prøv igjen</button>
+    <button class="btn-back" onclick="location.href='?id='+sessionStorage.getItem('song_id')">Prøv igjen</button>
   </div>
 
 </div>
@@ -418,6 +418,9 @@ function randomStr(len) {
 }
 
 async function startLogin() {
+  // Store current song ID before redirecting to Spotify
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) sessionStorage.setItem('song_id', id);
   const verifier  = randomStr(64);
   const challenge = base64url(await sha256(verifier));
   sessionStorage.setItem('pkce_verifier', verifier);
@@ -486,7 +489,7 @@ async function initPlayer(token) {
 
   player.addListener('authentication_error', () => {
     sessionStorage.removeItem('spotify_token');
-    showError('Innlogging utløpt. <a onclick="location.reload()" style="color:#f5e8ce;cursor:pointer">Logg inn igjen</a>');
+    showError('Innlogging utløpt. <a onclick="location.href='?id='+sessionStorage.getItem('song_id')" style="color:#f5e8ce;cursor:pointer">Logg inn igjen</a>');
   });
 
   await player.connect();
@@ -533,26 +536,35 @@ function showError(msg) {
 
 // ── Oppstart ──
 async function init() {
-  const params  = new URLSearchParams(location.search);
-  const code    = params.get('code');
-  const state   = params.get('state');
-  const songId  = code
-    ? new URLSearchParams(state).get('id')
-    : params.get('id');
+  const params = new URLSearchParams(location.search);
+  const code   = params.get('code');
+  const state  = params.get('state');
 
-  // Find song
+  // Song ID: from ?id= directly, or preserved in state during OAuth
+  let songId = params.get('id');
+  if (!songId && state) {
+    // state can be either "?id=21" or just "21"
+    const stateParams = new URLSearchParams(state.startsWith('?') ? state.slice(1) : 'id=' + state);
+    songId = stateParams.get('id') || state.replace('?id=','').replace('id=','');
+  }
+  // Also check sessionStorage in case page was reloaded
+  if (!songId) songId = sessionStorage.getItem('song_id');
+
   const idx = parseInt(songId, 10);
   currentSong = (!isNaN(idx) && idx >= 0 && idx < SONGS.length) ? SONGS[idx] : null;
 
   if (!currentSong) {
-    showError('Ugyldig kort-ID. Skann QR-koden på nytt.');
+    showError('Ugyldig kort-ID (' + songId + '). Skann QR-koden på nytt.');
     return;
   }
+
+  // Persist song ID across reloads
+  sessionStorage.setItem('song_id', idx);
 
   // Handle OAuth callback
   if (code) {
     show('screen-loading');
-    history.replaceState({}, '', '?id=' + songId);
+    history.replaceState({}, '', '?id=' + idx);
     try {
       const token = await getToken(code);
       if (token.access_token) {
