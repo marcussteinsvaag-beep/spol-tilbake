@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Spol tilbake!</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: #c8221a;
+  font-family: Arial Rounded MT Bold, Arial Black, Arial, sans-serif;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Logo topp ── */
+.logo {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: #c8221a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0 0;
+}
+.logo-cream {
+  background: #f5e8ce;
+  color: #c8221a;
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-style: italic;
+  padding: 5px 24px 6px;
+  border-radius: 6px;
+  letter-spacing: -0.5px;
+}
+.logo-sub {
+  color: rgba(245,232,206,0.65);
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-weight: 700;
+  padding-bottom: 12px;
+}
+
+/* ── Grønn bunn-stripe ── */
+.footer-stripe {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: #2d5a27;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.footer-text {
+  color: rgba(245,232,206,0.75);
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-style: italic;
+}
+
+/* ── Midtre innhold ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 100px 32px 60px;
+  text-align: center;
+}
+
+/* ── Login-skjerm ── */
+#screen-login .tagline {
+  color: #f5e8ce;
+  font-size: 1.1rem;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.btn-spotify {
+  background: #f5e8ce;
+  color: #c8221a;
+  border: none;
+  border-radius: 50px;
+  padding: 16px 36px;
+  font-size: 1rem;
+  font-weight: 900;
+  font-style: italic;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  letter-spacing: 0.5px;
+}
+.btn-spotify:active { transform: scale(0.97); }
+
+/* ── Spiller-skjerm ── */
+#screen-player { display: none; width: 100%; }
+
+.pulse-wrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(245,232,206,0.15);
+  animation: pulse 2s ease-out infinite;
+}
+.pulse-ring:nth-child(1) { width: 160px; height: 160px; animation-delay: 0s; }
+.pulse-ring:nth-child(2) { width: 130px; height: 130px; animation-delay: 0.4s; }
+.pulse-ring:nth-child(3) { width: 100px; height: 100px; animation-delay: 0.8s; }
+
+@keyframes pulse {
+  0%   { transform: scale(0.85); opacity: 0.6; }
+  50%  { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(0.85); opacity: 0.6; }
+}
+
+.note-icon {
+  font-size: 3.5rem;
+  color: #f5e8ce;
+  position: relative;
+  z-index: 2;
+  animation: notebob 2s ease-in-out infinite;
+}
+
+@keyframes notebob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.hint-text {
+  color: rgba(245,232,206,0.7);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: blink 2.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 0.25; }
+}
+
+/* ── Avsløring ── */
+#screen-reveal { display: none; width: 100%; }
+
+.reveal-card {
+  background: #f5e8ce;
+  border-radius: 12px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.reveal-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: #2d5a27;
+}
+
+.reveal-year {
+  font-size: 3.2rem;
+  font-weight: 900;
+  font-style: italic;
+  color: #c8221a;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.reveal-divider {
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #2d5a27 0, #2d5a27 4px, transparent 4px, transparent 8px);
+  margin: 14px 0;
+  opacity: 0.4;
+}
+
+.reveal-artist {
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: #2d5a27;
+  margin-bottom: 6px;
+}
+
+.reveal-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  font-style: italic;
+  color: #1a0800;
+  line-height: 1.2;
+}
+
+.btn-back {
+  background: transparent;
+  border: 2px solid rgba(245,232,206,0.5);
+  border-radius: 50px;
+  padding: 12px 28px;
+  color: #f5e8ce;
+  font-size: 0.85rem;
+  font-weight: 900;
+  font-style: italic;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 1px;
+  margin-top: 8px;
+}
+.btn-back:active { opacity: 0.7; }
+
+/* ── Feil-skjerm ── */
+#screen-error { display: none; }
+.error-text {
+  color: #f5e8ce;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ── Laster ── */
+#screen-loading { display: none; }
+.loading-text {
+  color: rgba(245,232,206,0.8);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 2px;
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+.dot-wrap { display: flex; gap: 8px; }
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #f5e8ce;
+  opacity: 0.4;
+  animation: dotpop 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpop {
+  0%,100% { transform: scale(1); opacity: 0.4; }
+  50%      { transform: scale(1.4); opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<div class="logo">
+  <div class="logo-cream">Spol tilbake!</div>
+  <div class="logo-sub">norsk musikk-kortspill</div>
+</div>
+
+<div class="main">
+
+  <!-- LOGIN -->
+  <div id="screen-login">
+    <p class="tagline">Logg inn med Spotify<br>for å spille av sangene</p>
+    <br>
+    <button class="btn-spotify" onclick="startLogin()">🎵 &nbsp;Logg inn med Spotify</button>
+  </div>
+
+  <!-- LASTER -->
+  <div id="screen-loading">
+    <div class="dot-wrap">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <br>
+    <div class="loading-text">Laster sang...</div>
+  </div>
+
+  <!-- SPILLER -->
+  <div id="screen-player">
+    <div class="pulse-wrap">
+      <div class="pulse-ring"></div>
+      <div class="pulse-ring"></div>
+      <div class="pulse-ring"></div>
+      <div class="note-icon">♪</div>
+    </div>
+    <div class="hint-text">Trykk for å avsløre</div>
+    <br>
+    <div id="tap-area" onclick="showReveal()" style="position:absolute;inset:0;cursor:pointer;"></div>
+  </div>
+
+  <!-- AVSLØRING -->
+  <div id="screen-reveal">
+    <div class="reveal-card">
+      <div class="reveal-year" id="reveal-year">—</div>
+      <div class="reveal-divider"></div>
+      <div class="reveal-artist" id="reveal-artist">—</div>
+      <div class="reveal-title" id="reveal-title">—</div>
+    </div>
+    <br>
+    <button class="btn-back" onclick="showPlayer()">↩ Tilbake</button>
+  </div>
+
+  <!-- FEIL -->
+  <div id="screen-error">
+    <p class="error-text" id="error-msg">Noe gikk galt.</p>
+    <br>
+    <button class="btn-back" onclick="location.reload()">Prøv igjen</button>
+  </div>
+
+</div>
+
+<div class="footer-stripe">
+  <div class="footer-text">Gjett årstallet</div>
+</div>
+
+<script>
+// ── KONFIGURASJON – fyll inn dine verdier ──
+const CLIENT_ID   = 'bfddb27c6d0b42cea723a19b63df61d8';          // fra developer.spotify.com
+const REDIRECT_URI = 'https://marcussteinsvaag-beep.github.io/spol-tilbake/';  // f.eks. https://brukernavn.github.io/spol-tilbake/
+
+// ── Sangliste: id = Spotify track ID ──
+// Format: { id: "spotify_track_id", year: 1980, artist: "a-ha", title: "Take On Me" }
+const SONGS = [
+  { id:"2WfaOiMkCvy7F5fcp2zZ8L", year:1953, artist:"Nora Brockstedt",       title:"Vill og vakker" },
+  { id:"3w3y8KPTBuRMGsLHIyTF8S", year:1956, artist:"Reidar Bøe",            title:"Kom, ta min hånd" },
+  { id:"2374M6g5TUd0HBTE6vFEhg", year:1959, artist:"Per Asplin",            title:"Blå blå hav" },
+  { id:"7xyYsOvq5Ec5P1FWmEMYFe", year:1960, artist:"Wenche Myhre",          title:"Lykkelig og fri" },
+  { id:"7d2yHxXFKNnbUZcMWZ3bOQ", year:1961, artist:"Kirsti Sparboe",        title:"Tiritomba" },
+  { id:"4sFmkZME6YNkUABJrIqENx", year:1965, artist:"Sverre Kjelsberg",      title:"Ola Bakken lever ennå" },
+  { id:"5EzgRIKYBxMEtBEJIfYqTW", year:1966, artist:"Bjørn Tidmand",         title:"Grevling i taket" },
+  { id:"3vRhWYXrCXoFbz3WFiqRBs", year:1967, artist:"Kirsti Sparboe",        title:"Voi voi" },
+  { id:"4xP9DaFnNBMNVSSJOGkMNt", year:1968, artist:"Åge Aleksandersen",     title:"Jorunn" },
+  { id:"6SHgchDL9vGkBRLTjKhGdZ", year:1969, artist:"Wencke Myhre",          title:"Han slapp meg aldri løs" },
+  { id:"0ybFZ2Ab08V8hBbCqHTIEA", year:1972, artist:"Bjørn Eidsvåg",         title:"Eg ser" },
+  { id:"7gSQv1OHpkIoAdUy4OHKGQ", year:1973, artist:"Åge Aleksandersen",     title:"Levva livet" },
+  { id:"5bcTCxgc7xCn5ZQzFcNOQ8", year:1974, artist:"Jahn Teigen",           title:"Mil etter mil" },
+  { id:"3b0P9wHCODFQiGqgGfkfgG", year:1978, artist:"Ole Ivars",             title:"Hjemover" },
+  { id:"2uzsVeFk4F5UNjHQvY3Tsn", year:1980, artist:"a-ha",                  title:"Take On Me" },
+  { id:"1lCyhECBO2xMgpiDVGHSBN", year:1981, artist:"Jahn Teigen",           title:"Do Re Mi" },
+  { id:"0Nl1yCuBJuEFJDjNOiLBYW", year:1982, artist:"Åge Aleksandersen",     title:"Om det så kosta" },
+  { id:"7xUbT1UzF0RGT1NwcVzKon", year:1983, artist:"Kari Bremnes",          title:"Over en by" },
+  { id:"5T8EDUDqKcs6OSOwEsfqG8", year:1985, artist:"Morten Abel",           title:"Yeah Yeah Yeah" },
+  { id:"0MyykuEYcGdpSQhJVJZDam", year:1986, artist:"a-ha",                  title:"The Sun Always Shines on T.V." },
+  { id:"2Gk5GB5VPkdxUmD3JEj3cR", year:1987, artist:"CC Cowboys",            title:"Solbriller på" },
+  { id:"3joNMDWZuGcGeN4SQMB8ld", year:1989, artist:"Secret Garden",         title:"Nocturne" },
+  { id:"4r8lRYnoOGdEi9oMlYhRpJ", year:1989, artist:"Bjørn Eidsvåg",         title:"Eg e den eg e" },
+  { id:"7GhIk7Il098yCjg4BQjzvb", year:1990, artist:"a-ha",                  title:"Crying in the Rain" },
+  { id:"7BSfGCGHFSiKiuvJiUXNhS", year:1993, artist:"M2M",                   title:"The Day You Went Away" },
+  { id:"3Z0lqJJVLuuMRIGpETyFOO", year:1995, artist:"Odd Nordstoga",         title:"Lys lyser" },
+  { id:"2FRnf9qhLbvw8fu4IBXx78", year:1997, artist:"Raga Rockers",          title:"Beat for beat" },
+  { id:"3bQ2CcKFe8DFNMxp2xJVMz", year:1998, artist:"Kurt Nilsen",           title:"She's So High" },
+  { id:"4vT0cxD3nGLyGCWL1pLBYm", year:1999, artist:"Kaizers Orchestra",     title:"Resistansen" },
+  { id:"0mxKBMTonP2NMJo0F5JXRS", year:2000, artist:"Maria Mena",            title:"Just Hold Me" },
+  { id:"4bHsxqR3GMqV1MJqwMxwdN", year:2001, artist:"Röyksopp",              title:"Eple" },
+  { id:"1Ib0Pc4yWMGlqLGEL6rJXE", year:2003, artist:"Kaizers Orchestra",     title:"Ompa til du dør" },
+  { id:"4uLU6hMCjMI75M1A2tKUQC", year:2004, artist:"Ylvis",                 title:"Jan Egeland" },
+  { id:"7hR22TOqpCFHdGFAQMBKAi", year:2006, artist:"Donkeyboy",             title:"Ambitions" },
+  { id:"0jXRxFOJMpCJHifDXKCcuT", year:2007, artist:"Kings of Convenience",  title:"Boat Behind" },
+  { id:"1TfqLAPs4K3s2rJMoCokcS", year:2009, artist:"Alexander Rybak",       title:"Fairytale" },
+  { id:"5jENFpBNbMqwt5kIB4JEwq", year:2009, artist:"Röyksopp",              title:"Happy Up Here" },
+  { id:"3n3Ppam7vgaVa1iaRUIOKE", year:2011, artist:"Aurora",                title:"Runaway" },
+  { id:"7oBPJCgQZkYSHbNECvGPNH", year:2012, artist:"Ylvis",                 title:"The Fox (What Does the Fox Say?)" },
+  { id:"0hVkRcBFJVJWJCXFuITJTF", year:2012, artist:"Sigrid",                title:"Don't Kill My Vibe" },
+  { id:"2ikAnvqOCaHG00BM3yCADW", year:2012, artist:"Karpe Diem",            title:"Hus i Norge" },
+  { id:"0gplL1WMoJ6iYaPgMCL0gX", year:2013, artist:"Dagny",                 title:"Backbeat" },
+  { id:"7ouMYWpwJ422jRcDASZB7P", year:2014, artist:"Alan Walker",           title:"Faded" },
+  { id:"5nH3FxzGGkkPgaGjZzgxGr", year:2015, artist:"Kygo",                  title:"Stole the Show" },
+  { id:"6uFhCzNB9kTt8l61LMzlnL", year:2016, artist:"Aurora",                title:"I Went Too Far" },
+  { id:"6RHWICwwR5b2sRuoRFXhBF", year:2016, artist:"Marcus & Martinus",     title:"Elektrisk" },
+  { id:"1mo3aT62DmM2J1fQpEiHkJ", year:2016, artist:"Alan Walker",           title:"Sing Me to Sleep" },
+  { id:"2aJDlirz6v2a4HREki98cP", year:2017, artist:"Kygo",                  title:"It Ain't Me" },
+  { id:"5pKCCKE2ajJHZ9KAiaK11H", year:2018, artist:"Sigrid",                title:"Sucker Punch" },
+  { id:"4n9AJFbGeGDKlMxkMYlE5s", year:2019, artist:"Alan Walker",           title:"On My Way" },
+  { id:"6vEzlbR5KbBLW8V39FBp3l", year:2020, artist:"Kygo",                  title:"Higher Love" },
+  { id:"0X6PFBm2q5fFqM0hkZfQzE", year:2021, artist:"Sigrid",                title:"Bad Life" },
+  { id:"3sY6qq1bQM57Y7VQGX3F1H", year:2021, artist:"Aurora",                title:"Cure for Me" },
+  { id:"3CeCwYWvdfXbZLXFhBrbnf", year:2022, artist:"Alan Walker",           title:"Lost Control" },
+  { id:"3vv9phKBnPAGDMNFrQSBOY", year:2022, artist:"Karpe",                 title:"Jubel" },
+  { id:"3pz0cSZVpkAqMvkNmNSoAE", year:2023, artist:"Aurora",                title:"What Happened to the Heart?" },
+  { id:"4S3rRFHAfLaJdBpfOkHQhx", year:2023, artist:"Sigrid",                title:"High Five" },
+  { id:"4LRPiXqCikLlN15c3yImP7", year:2024, artist:"Alan Walker",           title:"Hit the Ground" },
+];
+
+// ── PKCE OAuth helpers ──
+async function sha256(plain) {
+  const enc = new TextEncoder().encode(plain);
+  const hash = await crypto.subtle.digest('SHA-256', enc);
+  return hash;
+}
+function base64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function randomStr(len) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return base64url(arr);
+}
+
+async function startLogin() {
+  const verifier  = randomStr(64);
+  const challenge = base64url(await sha256(verifier));
+  sessionStorage.setItem('pkce_verifier', verifier);
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id:     CLIENT_ID,
+    scope:         'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state',
+    redirect_uri:  REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    state: location.search  // preserve ?id= param
+  });
+  location.href = 'https://accounts.spotify.com/authorize?' + params;
+}
+
+async function getToken(code) {
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'authorization_code',
+      code,
+      redirect_uri:  REDIRECT_URI,
+      client_id:     CLIENT_ID,
+      code_verifier: verifier
+    })
+  });
+  return res.json();
+}
+
+// ── Spotify Web Playback SDK ──
+let player = null;
+let deviceId = null;
+let accessToken = null;
+let currentSong = null;
+
+function loadSDK() {
+  return new Promise(resolve => {
+    window.onSpotifyWebPlaybackSDKReady = resolve;
+    const s = document.createElement('script');
+    s.src = 'https://sdk.scdn.co/spotify-player.js';
+    document.head.appendChild(s);
+  });
+}
+
+async function initPlayer(token) {
+  accessToken = token;
+  await loadSDK();
+
+  player = new Spotify.Player({
+    name: 'Spol tilbake!',
+    getOAuthToken: cb => cb(accessToken),
+    volume: 0.8
+  });
+
+  player.addListener('ready', ({ device_id }) => {
+    deviceId = device_id;
+    playSong();
+  });
+
+  player.addListener('not_ready', () => {
+    showError('Spotify-spilleren er ikke klar. Prøv å laste siden på nytt.');
+  });
+
+  player.addListener('authentication_error', () => {
+    sessionStorage.removeItem('spotify_token');
+    showError('Innlogging utløpt. <a onclick="location.reload()" style="color:#f5e8ce;cursor:pointer">Logg inn igjen</a>');
+  });
+
+  await player.connect();
+}
+
+async function playSong() {
+  if (!currentSong || !deviceId) return;
+  show('screen-loading');
+
+  try {
+    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ uris: [`spotify:track:${currentSong.id}`] })
+    });
+    show('screen-player');
+  } catch(e) {
+    showError('Kunne ikke spille av sangen. Sjekk at du har Spotify Premium.');
+  }
+}
+
+// ── Skjerm-styring ──
+function show(id) {
+  ['screen-login','screen-loading','screen-player','screen-reveal','screen-error']
+    .forEach(s => document.getElementById(s).style.display = s === id ? 'block' : 'none');
+}
+
+function showReveal() {
+  document.getElementById('reveal-year').textContent   = currentSong.year;
+  document.getElementById('reveal-artist').textContent = currentSong.artist;
+  document.getElementById('reveal-title').textContent  = currentSong.title;
+  show('screen-reveal');
+}
+
+function showPlayer() { show('screen-player'); }
+
+function showError(msg) {
+  document.getElementById('error-msg').innerHTML = msg;
+  show('screen-error');
+}
+
+// ── Oppstart ──
+async function init() {
+  const params  = new URLSearchParams(location.search);
+  const code    = params.get('code');
+  const state   = params.get('state');
+  const songId  = code
+    ? new URLSearchParams(state).get('id')
+    : params.get('id');
+
+  // Find song
+  const idx = parseInt(songId, 10);
+  currentSong = (!isNaN(idx) && idx >= 0 && idx < SONGS.length) ? SONGS[idx] : null;
+
+  if (!currentSong) {
+    showError('Ugyldig kort-ID. Skann QR-koden på nytt.');
+    return;
+  }
+
+  // Handle OAuth callback
+  if (code) {
+    show('screen-loading');
+    history.replaceState({}, '', '?id=' + songId);
+    try {
+      const token = await getToken(code);
+      if (token.access_token) {
+        sessionStorage.setItem('spotify_token', token.access_token);
+        await initPlayer(token.access_token);
+      } else {
+        showError('Innlogging feilet: ' + (token.error_description || token.error));
+      }
+    } catch(e) {
+      showError('Nettverksfeil ved innlogging.');
+    }
+    return;
+  }
+
+  // Already logged in?
+  const stored = sessionStorage.getItem('spotify_token');
+  if (stored) {
+    show('screen-loading');
+    await initPlayer(stored);
+    return;
+  }
+
+  // Show login
+  show('screen-login');
+}
+
+init();
+</script>
+</body>
+</html>
