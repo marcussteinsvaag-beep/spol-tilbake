@@ -293,16 +293,26 @@ function initPlayer(token) {
     });
     player.addListener('ready', function(data) {
       deviceId = data.device_id;
-      // Transfer playback to this device first, then play
-      fetch('https://api.spotify.com/v1/me/player', {
-        method: 'PUT',
-        headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
-        body: JSON.stringify({device_ids: [deviceId], play: false})
-      }).then(function() {
-        setTimeout(playSong, 800);
-      }).catch(function() {
-        playSong(); // try anyway
-      });
+      // Retry transfer with backoff – 403 means player not ready yet
+      function transferAndPlay(attempt) {
+        fetch('https://api.spotify.com/v1/me/player', {
+          method: 'PUT',
+          headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
+          body: JSON.stringify({device_ids: [deviceId], play: false})
+        }).then(function(r) {
+          if (r.ok || r.status === 204) {
+            setTimeout(playSong, 600);
+          } else if (attempt < 5) {
+            setTimeout(function(){ transferAndPlay(attempt + 1); }, 1000);
+          } else {
+            playSong(); // give up transferring, try playing directly
+          }
+        }).catch(function() {
+          if (attempt < 3) setTimeout(function(){ transferAndPlay(attempt + 1); }, 1000);
+          else playSong();
+        });
+      }
+      setTimeout(function(){ transferAndPlay(1); }, 1500);
     });
     player.addListener('not_ready', function() {
       sessionStorage.removeItem('spotify_token');
