@@ -283,7 +283,7 @@ body {
   <div id="screen-login">
     <p class="tagline">Logg inn med Spotify<br>for å spille av sangene</p>
     <br>
-    <button class="btn-spotify" id="login-btn">🎵 &nbsp;Logg inn med Spotify</button>
+    <button class="btn-spotify" onclick="window.startLogin()">🎵 &nbsp;Logg inn med Spotify</button>
   </div>
 
   <!-- LASTER -->
@@ -484,6 +484,7 @@ async function initPlayer(token) {
   });
 
   player.addListener('not_ready', () => {
+    sessionStorage.removeItem('spotify_token');
     showError('Spotify-spilleren er ikke klar. Prøv å laste siden på nytt.');
   });
 
@@ -583,7 +584,12 @@ async function init() {
   const stored = sessionStorage.getItem('spotify_token');
   if (stored) {
     show('screen-loading');
-    await initPlayer(stored);
+    try {
+      await initPlayer(stored);
+    } catch(e) {
+      sessionStorage.removeItem('spotify_token');
+      show('screen-login');
+    }
     return;
   }
 
@@ -591,7 +597,7 @@ async function init() {
   show('screen-login');
 }
 
-document.getElementById('login-btn').addEventListener('click', startLogin);
+window.startLogin = startLogin;
 init();
 </script>
 </body>
