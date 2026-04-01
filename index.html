@@ -274,78 +274,46 @@ function getToken(code) {
   }).then(function(r) { return r.json(); });
 }
 
-function loadSDK() {
-  return new Promise(function(resolve) {
-    window.onSpotifyWebPlaybackSDKReady = resolve;
-    var s = document.createElement('script');
-    s.src = 'https://sdk.scdn.co/spotify-player.js';
-    document.head.appendChild(s);
-  });
-}
-
 function initPlayer(token) {
   accessToken = token;
-  return loadSDK().then(function() {
-    player = new Spotify.Player({
-      name: 'Spol tilbake!',
-      getOAuthToken: function(cb) { cb(accessToken); },
-      volume: 0.8
-    });
-    player.addListener('ready', function(data) {
-      deviceId = data.device_id;
-      // Retry transfer with backoff – 403 means player not ready yet
-      function transferAndPlay(attempt) {
-        fetch('https://api.spotify.com/v1/me/player', {
-          method: 'PUT',
-          headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
-          body: JSON.stringify({device_ids: [deviceId], play: false})
-        }).then(function(r) {
-          if (r.ok || r.status === 204) {
-            setTimeout(playSong, 600);
-          } else if (attempt < 5) {
-            setTimeout(function(){ transferAndPlay(attempt + 1); }, 1000);
-          } else {
-            playSong(); // give up transferring, try playing directly
-          }
-        }).catch(function() {
-          if (attempt < 3) setTimeout(function(){ transferAndPlay(attempt + 1); }, 1000);
-          else playSong();
-        });
-      }
-      setTimeout(function(){ transferAndPlay(1); }, 1500);
-    });
-    player.addListener('not_ready', function() {
-      sessionStorage.removeItem('spotify_token');
-      showError('Spotify ikke klar – prøv igjen.');
-    });
-    player.addListener('authentication_error', function() {
-      sessionStorage.removeItem('spotify_token');
-      show('screen-login');
-    });
-    player.addListener('initialization_error', function(e) {
-      showError('Feil ved oppstart: ' + e.message);
-    });
-    player.connect();
-  });
+  playSong();
+  return Promise.resolve();
 }
 
 function playSong() {
-  if (!currentSong || !deviceId) return;
+  if (!currentSong) return;
   show('screen-loading');
-  fetch('https://api.spotify.com/v1/me/player/play?device_id=' + deviceId, {
-    method: 'PUT',
-    headers: {
-      'Authorization': 'Bearer ' + accessToken,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({uris: ['spotify:track:' + currentSong.id]})
-  }).then(function(r) {
-    if (r.ok || r.status === 204) {
-      show('screen-player');
-    } else {
-      r.text().then(function(t) { showError('Spotify svarte: ' + r.status + ' – ' + t); });
+
+  // Step 1: get available devices
+  fetch('https://api.spotify.com/v1/me/player/devices', {
+    headers: {'Authorization': 'Bearer ' + accessToken}
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var devices = data.devices || [];
+    var active = devices.find(function(d) { return d.is_active; });
+    var target = active || devices[0];
+
+    if (!target) {
+      showError('Ingen aktiv Spotify-enhet funnet. Åpne Spotify-appen på telefonen din og prøv igjen.');
+      return;
     }
-  }).catch(function(e) { showError('Nettverksfeil: ' + e.message); });
+
+    // Step 2: play on that device
+    var url = 'https://api.spotify.com/v1/me/player/play?device_id=' + target.id;
+    fetch(url, {
+      method: 'PUT',
+      headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
+      body: JSON.stringify({uris: ['spotify:track:' + currentSong.id]})
+    }).then(function(r) {
+      if (r.ok || r.status === 204) {
+        show('screen-player');
+      } else {
+        r.text().then(function(t) { showError('Spotify svarte: ' + r.status + ' – ' + t); });
+      }
+    });
+  })
+  .catch(function(e) { showError('Nettverksfeil: ' + e.message); });
 }
 
 // Knytt knapper til funksjoner
