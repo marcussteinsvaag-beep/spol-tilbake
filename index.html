@@ -299,18 +299,31 @@ function playSong() {
       return;
     }
 
-    // Step 2: play on that device
-    var url = 'https://api.spotify.com/v1/me/player/play?device_id=' + target.id;
-    fetch(url, {
-      method: 'PUT',
-      headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
-      body: JSON.stringify({uris: ['spotify:track:' + currentSong.id]})
-    }).then(function(r) {
-      if (r.ok || r.status === 204) {
-        show('screen-player');
-      } else {
-        r.text().then(function(t) { showError('Spotify svarte: ' + r.status + ' – ' + t); });
+    // Step 2: search for the track first to get real URI
+    var q = encodeURIComponent(currentSong.artist + ' ' + currentSong.title);
+    fetch('https://api.spotify.com/v1/search?q=' + q + '&type=track&limit=1', {
+      headers: {'Authorization': 'Bearer ' + accessToken}
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var tracks = data.tracks && data.tracks.items;
+      if (!tracks || tracks.length === 0) {
+        showError('Fant ikke sangen på Spotify: ' + currentSong.title);
+        return;
       }
+      var uri = tracks[0].uri;
+      var url = 'https://api.spotify.com/v1/me/player/play?device_id=' + target.id;
+      fetch(url, {
+        method: 'PUT',
+        headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
+        body: JSON.stringify({uris: [uri]})
+      }).then(function(r) {
+        if (r.ok || r.status === 204) {
+          show('screen-player');
+        } else {
+          r.text().then(function(t) { showError('Spotify svarte: ' + r.status + ' – ' + t); });
+        }
+      });
     });
   })
   .catch(function(e) { showError('Nettverksfeil: ' + e.message); });
@@ -371,6 +384,13 @@ document.getElementById('btn-retry').addEventListener('click', function() {
       }
     }).catch(function(e) { showError('Feil: ' + e.message); });
     return;
+  }
+
+  // Clear old token to force fresh login with correct scopes
+  var tokenVersion = sessionStorage.getItem('token_version');
+  if (tokenVersion !== '2') {
+    sessionStorage.removeItem('spotify_token');
+    sessionStorage.setItem('token_version', '2');
   }
 
   var stored = sessionStorage.getItem('spotify_token');
