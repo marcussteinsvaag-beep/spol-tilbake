@@ -497,7 +497,7 @@ function doLogin() {
     var params = new URLSearchParams({
       response_type: 'code',
       client_id: CLIENT_ID,
-      scope: 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state',
+      scope: 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative',
       redirect_uri: REDIRECT_URI,
       code_challenge_method: 'S256',
       code_challenge: challenge
@@ -729,9 +729,9 @@ document.getElementById('btn-retry').addEventListener('click', function() {
 
   // Clear old token to force fresh login with correct scopes
   var tokenVersion = sessionStorage.getItem('token_version');
-  if (tokenVersion !== '2') {
+  if (tokenVersion !== '3') {
     sessionStorage.removeItem('spotify_token');
-    sessionStorage.setItem('token_version', '2');
+    sessionStorage.setItem('token_version', '3');
   }
 
   var stored = sessionStorage.getItem('spotify_token');
